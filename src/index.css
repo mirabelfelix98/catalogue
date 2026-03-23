@@ -1,0 +1,44 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Playfair Display", serif;
+  --font-sans: "DM Sans", sans-serif;
+
+  --color-sun: #E8A020;
+  --color-amber: #C07010;
+  --color-gold: #F5C842;
+  --color-bg: #FEFAF3;
+  --color-bg2: #FFF8EC;
+  --color-deep: #1A1208;
+  --color-dark: #2D2110;
+  --color-text: #3A2C14;
+  --color-muted: #7A6040;
+  --color-border: rgba(200,140,30,0.15);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-bg text-text font-sans antialiased;
+  }
+
+  ::-webkit-scrollbar {
+    width: 5px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-bg;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-sun rounded-full;
+  }
+}
+
+@layer components {
+  .hero-gradient {
+    background: linear-gradient(135deg, #1A1208 0%, #3D2A0A 100%);
+  }
+}
