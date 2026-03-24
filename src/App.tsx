@@ -18,8 +18,12 @@ const App: React.FC = () => {
 
   const goHome = (e: React.MouseEvent) => {
     e.preventDefault();
-    const base = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
-    window.location.href = base + '02best-solar.html';
+    window.location.href = 'https://02best-solar.netlify.app';
+  };
+
+  const getOptimizedUrl = (url: string, width: number = 600) => {
+    if (!url.includes('githubusercontent.com')) return url;
+    return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${width}&output=webp&q=80`;
   };
 
   const filteredProducts = activeFilter === 'all' 
@@ -50,7 +54,7 @@ const App: React.FC = () => {
           <span className="text-dark"> Solar</span>
         </div>
         <a 
-          href="02best-solar.html" 
+          href="https://02best-solar.netlify.app" 
           onClick={goHome}
           className="bg-sun hover:bg-amber text-white px-5 py-2.25 rounded-full text-[0.83rem] font-semibold transition-all duration-300 hover:-translate-y-0.5 shadow-md hover:shadow-lg"
         >
@@ -148,7 +152,7 @@ const App: React.FC = () => {
                         </svg>
                       </div>
                       <img 
-                        src={product.image} 
+                        src={getOptimizedUrl(product.image, 500)} 
                         alt={product.name}
                         loading="lazy"
                         onError={(e) => {
@@ -208,7 +212,7 @@ const App: React.FC = () => {
                   </svg>
                 </div>
                 <img 
-                  src={selectedProduct.image} 
+                  src={getOptimizedUrl(selectedProduct.image, 1000)} 
                   alt={selectedProduct.name}
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
@@ -263,7 +267,7 @@ const App: React.FC = () => {
               💬 WhatsApp for Free Quote
             </a>
             <a 
-              href="02best-solar.html" 
+              href="https://02best-solar.netlify.app" 
               onClick={goHome}
               className="bg-transparent border-2 border-white/20 hover:border-gold hover:text-gold text-white px-8 py-4 rounded-full font-bold transition-all duration-300"
             >
