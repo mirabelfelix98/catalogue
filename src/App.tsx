@@ -1,7 +1,59 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { products, categories } from './data';
 import { Product } from './types';
+
+// Memoized Product Card for performance
+const ProductCard = memo(({ product, index, onOpen }: { product: Product, index: number, onOpen: (p: Product) => void }) => {
+  const getOptimizedUrl = (url: string, width: number = 500) => {
+    if (!url.includes('githubusercontent.com')) return url;
+    return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${width}&output=webp&q=80`;
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-50px" }}
+      transition={{ duration: 0.4, delay: Math.min(index * 0.05, 0.3) }}
+      onClick={() => onOpen(product)}
+      className="bg-white border border-border rounded-[18px] overflow-hidden cursor-pointer hover:shadow-[0_18px_55px_rgba(200,130,0,0.13)] hover:-translate-y-1.25 hover:border-sun/30 transition-all duration-300 group"
+    >
+      <div className="h-[220px] bg-[#f0ede8] overflow-hidden relative flex items-center justify-center">
+        <div className="absolute inset-0 flex items-center justify-center text-sun/20">
+          <svg className="animate-spin h-8 w-8" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </div>
+        <img 
+          src={getOptimizedUrl(product.image, 500)} 
+          alt={product.name}
+          loading="lazy"
+          decoding="async"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.src = `https://picsum.photos/seed/${product.id}/400/300`;
+          }}
+          className="w-full h-full object-cover group-hover:scale-106 transition-transform duration-500 relative z-10"
+        />
+        <div className="absolute top-3 left-3 bg-sun text-white text-[0.67rem] font-bold tracking-widest uppercase px-2.75 py-1 rounded-full shadow-[0_4px_12px_rgba(232,160,32,0.4)]">
+          {product.badge}
+        </div>
+      </div>
+      <div className="p-[18px] pb-5">
+        <h3 className="font-serif text-base font-bold text-dark mb-1.75 leading-tight">{product.name}</h3>
+        <p className="text-[0.84rem] leading-relaxed text-muted line-clamp-2">{product.description}</p>
+        <div className="flex items-center justify-between mt-3.5 pt-2.75 border-t border-border">
+          <span className="text-[0.72rem] text-[#2A8A40] font-semibold">● In Stock</span>
+          <span className="bg-sun/10 text-sun px-3.25 py-1.5 rounded-2xl text-[0.76rem] font-semibold">Enquire →</span>
+        </div>
+      </div>
+    </motion.div>
+  );
+});
+
+ProductCard.displayName = 'ProductCard';
 
 const App: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState('all');
@@ -12,7 +64,7 @@ const App: React.FC = () => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -26,14 +78,19 @@ const App: React.FC = () => {
     return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${width}&output=webp&q=80`;
   };
 
-  const filteredProducts = activeFilter === 'all' 
-    ? products 
-    : products.filter(p => p.cat === activeFilter);
+  // Group products by category for efficient rendering
+  const productsByCategory = useMemo(() => {
+    const grouped: Record<string, Product[]> = {};
+    categories.forEach(cat => {
+      if (cat.key === 'all') return;
+      grouped[cat.key] = products.filter(p => p.cat === cat.key);
+    });
+    return grouped;
+  }, []);
 
   const openLb = (product: Product) => {
     setSelectedProduct(product);
     document.body.style.overflow = 'hidden';
-    // Meta Pixel Tracking
     if ((window as any).fbq) {
       (window as any).fbq('track', 'Lead', { content_name: 'Product Enquiry - ' + product.name });
     }
@@ -64,7 +121,6 @@ const App: React.FC = () => {
 
       {/* Hero Banner */}
       <header className="relative bg-deep pt-32 pb-20 md:pt-40 md:pb-28 px-5 md:px-10 overflow-hidden text-center">
-        {/* Decorative Circles */}
         <div className="absolute top-0 right-0 w-[40vw] h-[40vw] bg-sun/7 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/4" />
         <div className="absolute bottom-0 left-0 w-[30vw] h-[30vw] bg-gold/5 blur-[100px] rounded-full translate-y-1/2 -translate-x-1/4" />
         
@@ -117,16 +173,20 @@ const App: React.FC = () => {
 
       {/* Product Grid */}
       <main className="max-w-[1180px] mx-auto px-5 md:px-10 pt-10 pb-24">
-        {categories.filter(c => c.key !== 'all').map((cat) => {
-          const catProducts = products.filter(p => p.cat === cat.key);
-          if (activeFilter !== 'all' && activeFilter !== cat.key) return null;
+        {(Object.entries(productsByCategory) as [string, Product[]][]).map(([catKey, catProducts]) => {
+          const catLabel = categories.find(c => c.key === catKey)?.label || catKey;
+          if (activeFilter !== 'all' && activeFilter !== catKey) return null;
           
           return (
-            <div key={cat.key} className="mb-16 last:mb-0">
+            <div 
+              key={catKey} 
+              className="mb-16 last:mb-0"
+              style={{ contentVisibility: 'auto', containIntrinsicSize: '0 500px' } as any}
+            >
               <div className="flex items-center gap-4 mb-8">
                 <div className="w-1.25 h-6.5 bg-sun rounded-full" />
                 <h2 className="font-serif text-xl md:text-2xl font-bold text-dark flex items-center gap-3">
-                  {cat.label}
+                  {catLabel}
                   <span className="bg-sun/10 text-sun text-[0.7rem] px-2.5 py-0.75 rounded-full font-bold">
                     {catProducts.length} Items
                   </span>
@@ -135,45 +195,12 @@ const App: React.FC = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                 {catProducts.map((product, index) => (
-                  <motion.div
-                    key={product.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, margin: "-50px" }}
-                    transition={{ duration: 0.5, delay: index * 0.06 }}
-                    onClick={() => openLb(product)}
-                    className="bg-white border border-border rounded-[18px] overflow-hidden cursor-pointer hover:shadow-[0_18px_55px_rgba(200,130,0,0.13)] hover:-translate-y-1.25 hover:border-sun/30 transition-all duration-300 group"
-                  >
-                    <div className="h-[220px] bg-[#f0ede8] overflow-hidden relative flex items-center justify-center">
-                      <div className="absolute inset-0 flex items-center justify-center text-sun/20">
-                        <svg className="animate-spin h-8 w-8" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                      </div>
-                      <img 
-                        src={getOptimizedUrl(product.image, 500)} 
-                        alt={product.name}
-                        loading="lazy"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = `https://picsum.photos/seed/${product.id}/400/300`;
-                        }}
-                        className="w-full h-full object-cover group-hover:scale-106 transition-transform duration-500 relative z-10"
-                      />
-                      <div className="absolute top-3 left-3 bg-sun text-white text-[0.67rem] font-bold tracking-widest uppercase px-2.75 py-1 rounded-full shadow-[0_4px_12px_rgba(232,160,32,0.4)]">
-                        {product.badge}
-                      </div>
-                    </div>
-                    <div className="p-[18px] pb-5">
-                      <h3 className="font-serif text-base font-bold text-dark mb-1.75 leading-tight">{product.name}</h3>
-                      <p className="text-[0.84rem] leading-relaxed text-muted line-clamp-2">{product.description}</p>
-                      <div className="flex items-center justify-between mt-3.5 pt-2.75 border-t border-border">
-                        <span className="text-[0.72rem] text-[#2A8A40] font-semibold">● In Stock</span>
-                        <span className="bg-sun/10 text-sun px-3.25 py-1.5 rounded-2xl text-[0.76rem] font-semibold">Enquire →</span>
-                      </div>
-                    </div>
-                  </motion.div>
+                  <ProductCard 
+                    key={product.id} 
+                    product={product} 
+                    index={index} 
+                    onOpen={openLb} 
+                  />
                 ))}
               </div>
             </div>
@@ -214,6 +241,7 @@ const App: React.FC = () => {
                 <img 
                   src={getOptimizedUrl(selectedProduct.image, 1000)} 
                   alt={selectedProduct.name}
+                  decoding="async"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     target.src = `https://picsum.photos/seed/${selectedProduct.id}/800/600`;
